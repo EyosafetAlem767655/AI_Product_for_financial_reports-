@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% block title %}{{ "Edit" if client and client.id else "Add" }} Client | AW Client Report Portal{% endblock %}
+{% block content %}
+<header class="page-header">
+  <div>
+    <p class="eyebrow">{{ "Edit household" if client and client.id else "New household" }}</p>
+    <h1>{{ client.household_name if client and client.id else "Add Client" }}</h1>
+    <p class="subtle">Profile data becomes the default for quarterly SACS and TCC report entry.</p>
+  </div>
+  <a class="button ghost" href="{{ '/clients/' ~ client.id if client and client.id else '/clients' }}">Cancel</a>
+</header>
+
+{% if errors %}
+  <div class="alert">
+    <strong>Please correct the highlighted profile items.</strong>
+    {% for error in errors %}<span>{{ error }}</span>{% endfor %}
+  </div>
+{% endif %}
+
+<form class="form-layout" method="post">
+  <section class="panel">
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">Household</p>
+        <h2>Client Profile</h2>
+      </div>
+      <div class="segmented">
+        <label>
+          <input type="radio" name="marital_status" value="single" {% if not client or client.marital_status != "married" %}checked{% endif %}>
+          Single
+        </label>
+        <label>
+          <input type="radio" name="marital_status" value="married" {% if client and client.marital_status == "married" %}checked{% endif %}>
+          Married
+        </label>
+      </div>
+    </div>
+    <div class="form-grid">
+      <label>Household name
+        <input required name="household_name" value="{{ client.household_name if client else '' }}">
+      </label>
+      <label>Monthly salary / inflow after tax
+        <input required type="number" step="0.01" name="monthly_inflow" value="{{ client.monthly_inflow if client else 0 }}">
+      </label>
+      <label>Agreed monthly expense budget / outflow
+        <input required type="number" step="0.01" name="monthly_outflow" value="{{ client.monthly_outflow if client else 0 }}">
+      </label>
+      <label>Private reserve current balance
+        <input required type="number" step="0.01" name="private_reserve_balance" value="{{ client.private_reserve_balance if client else 0 }}">
+      </label>
+      <label>Private reserve target override
+        <input type="number" step="0.01" name="private_reserve_target_override" value="{{ client.private_reserve_target_override if client and client.private_reserve_target_override is not none else '' }}">
+      </label>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">People</p>
+        <h2>Client Information</h2>
+      </div>
+    </div>
+    <div class="split-grid">
+      <div class="soft-card">
+        <h3>Client 1</h3>
+        <div class="form-grid compact">
+          <label>First name <input required name="client1_first_name" value="{{ client1.first_name if client1 else '' }}"></label>
+          <label>Last name <input required name="client1_last_name" value="{{ client1.last_name if client1 else '' }}"></label>
+          <label>DOB <input required type="date" name="client1_dob" data-age-source="client1-age" value="{{ client1.dob if client1 else '' }}"></label>
+          <label>Age <input readonly id="client1-age" class="readonly" value="{{ client1.dob|default('', true) }}"></label>
+          <label>SSN last 4 <input required maxlength="4" name="client1_ssn_last4" value="{{ client1.ssn_last4 if client1 else '' }}"></label>
+        </div>
+      </div>
+      <div class="soft-card spouse-panel">
+        <h3>Client 2</h3>
+        <div class="form-grid compact">
+          <label>First name <input name="client2_first_name" value="{{ client2.first_name if client2 else '' }}"></label>
+          <label>Last name <input name="client2_last_name" value="{{ client2.last_name if client2 else '' }}"></label>
+          <label>DOB <input type="date" name="client2_dob" data-age-source="client2-age" value="{{ client2.dob if client2 else '' }}"></label>
+          <label>Age <input readonly id="client2-age" class="readonly"></label>
+          <label>SSN last 4 <input maxlength="4" name="client2_ssn_last4" value="{{ client2.ssn_last4 if client2 else '' }}"></label>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">Trust / Property</p>
+        <h2>Property Details</h2>
+      </div>
+    </div>
+    <div class="form-grid">
+      <label>Property address
+        <input name="property_address" value="{{ client.property_address if client else '' }}">
+      </label>
+      <label>Zillow/home value manually entered
+        <input required type="number" step="0.01" name="property_value" value="{{ client.property_value if client else 0 }}">
+      </label>
+    </div>
+  </section>
+
+  <section class="panel dynamic-section" data-row-section>
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">Risk planning</p>
+        <h2>Insurance Deductibles</h2>
+      </div>
+      <button class="button small ghost" type="button" data-add-row="deductible-row">Add deductible</button>
+    </div>
+    <div class="row-stack" data-row-container="deductible-row">
+      {% for deductible in deductibles %}
+        <div class="entry-row" data-row="deductible-row">
+          <input name="deductible_label[]" placeholder="Deductible label" value="{{ deductible.label }}">
+          <input name="deductible_amount[]" type="number" step="0.01" placeholder="Amount" value="{{ deductible.amount }}">
+          <button type="button" class="icon-button" data-remove-row>&times;</button>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="panel dynamic-section" data-row-section>
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">Capital structure</p>
+        <h2>Accounts</h2>
+      </div>
+      <button class="button small ghost" type="button" data-add-row="account-row">Add account</button>
+    </div>
+    <div class="row-stack" data-row-container="account-row">
+      {% for account in accounts %}
+        <div class="entry-row account-entry" data-row="account-row">
+          <select name="account_owner[]">
+            {% for owner in ["client1", "client2", "joint", "trust", "other"] %}
+              <option value="{{ owner }}" {% if account.owner == owner %}selected{% endif %}>{{ owner|title }}</option>
+            {% endfor %}
+          </select>
+          <select name="account_category[]">
+            <option value="retirement" {% if account.category == "retirement" %}selected{% endif %}>Retirement</option>
+            <option value="non_retirement" {% if account.category == "non_retirement" %}selected{% endif %}>Non-retirement</option>
+          </select>
+          <input name="account_type[]" placeholder="IRA, Roth IRA, 401K..." value="{{ account.account_type }}">
+          <input name="account_institution[]" placeholder="Institution" value="{{ account.institution }}">
+          <input name="account_last4[]" maxlength="4" placeholder="Last 4" value="{{ account.account_last4 }}">
+          <input name="account_balance[]" type="number" step="0.01" placeholder="Balance" value="{{ account.balance }}">
+          <input name="account_cash_balance[]" type="number" step="0.01" placeholder="Cash balance" value="{{ account.cash_balance if account.cash_balance is not none else '' }}">
+          <button type="button" class="icon-button" data-remove-row>&times;</button>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="panel dynamic-section" data-row-section>
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">Debt tracking</p>
+        <h2>Liabilities</h2>
+      </div>
+      <button class="button small ghost" type="button" data-add-row="liability-row">Add liability</button>
+    </div>
+    <div class="row-stack" data-row-container="liability-row">
+      {% for liability in liabilities %}
+        <div class="entry-row liability-entry" data-row="liability-row">
+          <select name="liability_type[]">
+            {% for liability_type in ["mortgage", "auto loan", "student loan", "other"] %}
+              <option value="{{ liability_type }}" {% if liability.liability_type == liability_type %}selected{% endif %}>{{ liability_type|title }}</option>
+            {% endfor %}
+          </select>
+          <input name="liability_lender[]" placeholder="Lender" value="{{ liability.lender }}">
+          <input name="liability_interest_rate[]" type="number" step="0.01" placeholder="Interest rate" value="{{ liability.interest_rate }}">
+          <input name="liability_balance[]" type="number" step="0.01" placeholder="Balance" value="{{ liability.balance }}">
+          <button type="button" class="icon-button" data-remove-row>&times;</button>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <div class="sticky-actions">
+    <button class="button primary" type="submit">Save Client</button>
+    <a class="button ghost" href="{{ '/clients/' ~ client.id if client and client.id else '/clients' }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

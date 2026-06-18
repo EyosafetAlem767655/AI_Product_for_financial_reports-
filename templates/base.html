@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}AW Client Report Portal{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='/css/app.css') }}">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="/">
+        <span class="brand-mark">AW</span>
+        <span>
+          <strong>Client Reports</strong>
+          <small>Quarterly planning portal</small>
+        </span>
+      </a>
+      <nav class="nav">
+        <a href="/">Dashboard</a>
+        <a href="/clients">Clients</a>
+        <a href="/clients/new">Add Client</a>
+      </nav>
+      <div class="sidebar-note">
+        <span class="dot"></span>
+        V1 manual data entry. PDFs are generated locally.
+      </div>
+    </aside>
+    <main class="main">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+  <script src="{{ url_for('static', path='/js/app.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

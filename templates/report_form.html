@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block title %}Generate Report | {{ client.household_name }}{% endblock %}
+{% block content %}
+<header class="page-header">
+  <div>
+    <p class="eyebrow">Quarterly report entry</p>
+    <h1>{{ client.household_name }}</h1>
+    <p class="subtle">Enter this quarter's dynamic values. Totals update live and are recalculated again by the backend before PDFs are generated.</p>
+  </div>
+  <a class="button ghost" href="/clients/{{ client.id }}">Back to Client</a>
+</header>
+
+{% if errors %}
+  <div class="alert">
+    <strong>Report generation is blocked until required fields are complete.</strong>
+    {% for error in errors %}<span>{{ error }}</span>{% endfor %}
+  </div>
+{% endif %}
+
+<form id="report-form" class="report-layout" method="post" action="/clients/{{ client.id }}/reports">
+  <div class="report-main">
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">Report period</p>
+          <h2>Quarter Settings</h2>
+        </div>
+      </div>
+      <div class="form-grid">
+        <label>Quarter label
+          <input name="quarter_label" value="{{ values.get('quarter_label', quarter_label) or quarter_label }}" required>
+        </label>
+        <label>Report date
+          <input name="report_date" type="date" value="{{ values.get('report_date', report_date) or report_date }}" required>
+        </label>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">SACS first</p>
+          <h2>Cashflow & Reserve</h2>
+        </div>
+      </div>
+      <div class="form-grid">
+        {% set previous_inflow = previous.fields.get('inflow') %}
+        <label class="{{ 'missing' if 'inflow' in missing_fields else '' }}">Inflow
+          <input id="inflow" class="calc-input" data-calc="inflow" name="inflow" type="number" step="0.01" value="{{ values.get('inflow') }}" required>
+          <small>Previous: {{ previous_inflow|currency if previous_inflow is not none else "None" }}</small>
+          {% if previous_inflow is not none %}<button type="button" class="use-last" data-target="inflow" data-value="{{ previous_inflow }}">Use last value</button>{% endif %}
+        </label>
+        {% set previous_outflow = previous.fields.get('outflow') %}
+        <label class="{{ 'missing' if 'outflow' in missing_fields else '' }}">Outflow
+          <input id="outflow" class="calc-input" data-calc="outflow" name="outflow" type="number" step="0.01" value="{{ values.get('outflow') }}" required>
+          <small>Previous: {{ previous_outflow|currency if previous_outflow is not none else "None" }}</small>
+          {% if previous_outflow is not none %}<button type="button" class="use-last" data-target="outflow" data-value="{{ previous_outflow }}">Use last value</button>{% endif %}
+        </label>
+        {% set previous_reserve = previous.fields.get('private_reserve_balance') %}
+        <label class="{{ 'missing' if 'private_reserve_balance' in missing_fields else '' }}">Private reserve balance
+          <input id="private_reserve_balance" class="calc-input" data-calc="reserve" name="private_reserve_balance" type="number" step="0.01" value="{{ values.get('private_reserve_balance') }}" required>
+          <small>Previous: {{ previous_reserve|currency if previous_reserve is not none else "None" }}</small>
+          {% if previous_reserve is not none %}<button type="button" class="use-last" data-target="private_reserve_balance" data-value="{{ previous_reserve }}">Use last value</button>{% endif %}
+        </label>
+      </div>
+      <div class="subsection-title">Deductibles</div>
+      <div class="compact-table">
+        {% for deductible in client.deductibles %}
+          {% set previous_deductible = previous.deductibles.get(deductible.id|string) %}
+          {% set key = 'deductible_amount_' ~ deductible.id %}
+          <label class="table-line {{ 'missing' if key in missing_fields else '' }}">
+            <span>{{ deductible.label }}</span>
+            <input id="{{ key }}" class="calc-input deductible-input" data-calc="deductible" name="{{ key }}" type="number" step="0.01" value="{{ values.get(key) }}" required>
+            <small>Previous: {{ previous_deductible.amount|currency if previous_deductible else "None" }}</small>
+            {% if previous_deductible %}<button type="button" class="use-last" data-target="{{ key }}" data-value="{{ previous_deductible.amount }}">Use last value</button>{% endif %}
+          </label>
+        {% else %}
+          <div class="empty-state">No deductible lines on this profile.</div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">TCC second</p>
+          <h2>Capital & Liabilities</h2>
+        </div>
+      </div>
+      {% set previous_property = previous.fields.get('property_value') %}
+      <label class="full-label {{ 'missing' if 'property_value' in missing_fields else '' }}">Zillow/home value manually entered
+        <input id="property_value" class="calc-input" data-calc="property" name="property_value" type="number" step="0.01" value="{{ values.get('property_value') }}" required>
+        <small>{{ client.property_address or "Property address not entered" }} &middot; Previous: {{ previous_property|currency if previous_property is not none else "None" }}</small>
+        {% if previous_property is not none %}<button type="button" class="use-last" data-target="property_value" data-value="{{ previous_property }}">Use last value</button>{% endif %}
+      </label>
+
+      <div class="subsection-title">Investment and banking accounts</div>
+      <div class="report-rows">
+        {% for account in client.accounts %}
+          {% set previous_account = previous.accounts.get(account.id|string) %}
+          {% set balance_key = 'account_balance_' ~ account.id %}
+          {% set cash_key = 'account_cash_balance_' ~ account.id %}
+          <div class="report-row-card" data-account-row data-owner="{{ account.owner }}" data-category="{{ account.category }}">
+            <div>
+              <strong>{{ account.account_type }}</strong>
+              <small>{{ account.owner|title }} &middot; {{ account.category.replace("_", " ")|title }} &middot; {{ account.institution }} ...{{ account.account_last4 }}</small>
+            </div>
+            <label class="{{ 'missing' if balance_key in missing_fields else '' }}">Balance
+              <input id="{{ balance_key }}" class="calc-input account-balance" data-calc="account" name="{{ balance_key }}" type="number" step="0.01" value="{{ values.get(balance_key) }}" required>
+              <small>Previous: {{ previous_account.balance|currency if previous_account else "None" }}</small>
+              {% if previous_account %}<button type="button" class="use-last" data-target="{{ balance_key }}" data-value="{{ previous_account.balance }}">Use last value</button>{% endif %}
+            </label>
+            <label>Cash balance
+              <input id="{{ cash_key }}" class="calc-input" name="{{ cash_key }}" type="number" step="0.01" value="{{ values.get(cash_key) }}">
+              <small>Previous: {{ previous_account.cash_balance|currency if previous_account and previous_account.cash_balance is not none else "None" }}</small>
+              {% if previous_account and previous_account.cash_balance is not none %}<button type="button" class="use-last" data-target="{{ cash_key }}" data-value="{{ previous_account.cash_balance }}">Use last value</button>{% endif %}
+            </label>
+          </div>
+        {% else %}
+          <div class="empty-state">No account rows on this profile.</div>
+        {% endfor %}
+      </div>
+
+      <div class="subsection-title">Liabilities</div>
+      <div class="report-rows">
+        {% for liability in client.liabilities %}
+          {% set previous_liability = previous.liabilities.get(liability.id|string) %}
+          {% set balance_key = 'liability_balance_' ~ liability.id %}
+          {% set rate_key = 'liability_interest_rate_' ~ liability.id %}
+          <div class="report-row-card liability" data-liability-row>
+            <div>
+              <strong>{{ liability.liability_type|title }}</strong>
+              <small>{{ liability.lender }}</small>
+            </div>
+            <label class="{{ 'missing' if rate_key in missing_fields else '' }}">Interest rate
+              <input id="{{ rate_key }}" class="calc-input" name="{{ rate_key }}" type="number" step="0.01" value="{{ values.get(rate_key) }}" required>
+              <small>Previous: {{ "%.2f"|format(previous_liability.interest_rate) ~ "%" if previous_liability else "None" }}</small>
+              {% if previous_liability %}<button type="button" class="use-last" data-target="{{ rate_key }}" data-value="{{ previous_liability.interest_rate }}">Use last value</button>{% endif %}
+            </label>
+            <label class="{{ 'missing' if balance_key in missing_fields else '' }}">Balance
+              <input id="{{ balance_key }}" class="calc-input liability-balance" data-calc="liability" name="{{ balance_key }}" type="number" step="0.01" value="{{ values.get(balance_key) }}" required>
+              <small>Previous: {{ previous_liability.balance|currency if previous_liability else "None" }}</small>
+              {% if previous_liability %}<button type="button" class="use-last" data-target="{{ balance_key }}" data-value="{{ previous_liability.balance }}">Use last value</button>{% endif %}
+            </label>
+          </div>
+        {% else %}
+          <div class="empty-state">No liabilities on this profile.</div>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+
+  <aside class="calc-panel">
+    <div class="panel sticky-panel">
+      <p class="eyebrow">Live calculations</p>
+      <h2>Quarter Summary</h2>
+      <dl class="summary-list">
+        <div><dt>SACS Excess</dt><dd id="calc-excess">$0.00</dd></div>
+        <div><dt>Private Reserve Target</dt><dd id="calc-reserve-target">$0.00</dd></div>
+        <div><dt>Client 1 Retirement</dt><dd id="calc-client1">$0.00</dd></div>
+        <div><dt>Client 2 Retirement</dt><dd id="calc-client2">$0.00</dd></div>
+        <div><dt>Non-Retirement</dt><dd id="calc-non-retirement">$0.00</dd></div>
+        <div class="major"><dt>Grand Total Net Worth</dt><dd id="calc-grand">$0.00</dd></div>
+        <div><dt>Liabilities Total</dt><dd id="calc-liabilities">$0.00</dd></div>
+      </dl>
+      <p class="calc-note">Liabilities are shown separately and are not subtracted from net worth.</p>
+      <button class="button primary full" type="submit">Generate SACS + TCC PDFs</button>
+    </div>
+  </aside>
+</form>
+{% endblock %}

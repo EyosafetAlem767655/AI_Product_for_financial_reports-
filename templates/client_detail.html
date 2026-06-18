@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% block title %}{{ client.household_name }} | AW Client Report Portal{% endblock %}
+{% block content %}
+<header class="page-header">
+  <div>
+    <p class="eyebrow">Client detail</p>
+    <h1>{{ client.household_name }}</h1>
+    <p class="subtle">{{ client.marital_status|title }} household &middot; {{ client.property_address or "No property address entered" }}</p>
+  </div>
+  <div class="header-actions">
+    <a class="button primary" href="/clients/{{ client.id }}/reports/new">Generate Quarterly Report</a>
+    <a class="button ghost" href="/clients/{{ client.id }}/edit">Edit Client</a>
+  </div>
+</header>
+
+<section class="stats-grid">
+  <div class="stat-card">
+    <span>SACS Excess</span>
+    <strong>{{ totals.sacs_excess|currency }}</strong>
+    <small>Inflow minus outflow</small>
+  </div>
+  <div class="stat-card green">
+    <span>Private Reserve Target</span>
+    <strong>{{ totals.private_reserve_target|currency }}</strong>
+    <small>6 months expenses + deductibles</small>
+  </div>
+  <div class="stat-card">
+    <span>TCC Net Worth</span>
+    <strong>{{ totals.grand_total_net_worth|currency }}</strong>
+    <small>Liabilities displayed separately</small>
+  </div>
+  <div class="stat-card">
+    <span>Liabilities</span>
+    <strong>{{ totals.liabilities_total|currency }}</strong>
+    <small>Not subtracted from TCC total</small>
+  </div>
+</section>
+
+<section class="content-grid">
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">Profile</p>
+        <h2>Household Members</h2>
+      </div>
+    </div>
+    <div class="person-grid">
+      {% for person in [client1, client2] if person %}
+        <div class="soft-card">
+          <h3>{{ person.first_name }} {{ person.last_name }}</h3>
+          <dl class="detail-list">
+            <div><dt>DOB</dt><dd>{{ person.dob }}</dd></div>
+            <div><dt>Age</dt><dd>{{ payload.people[loop.index0].age }}</dd></div>
+            <div><dt>SSN last 4</dt><dd>{{ person.ssn_last4 }}</dd></div>
+          </dl>
+        </div>
+      {% endfor %}
+    </div>
+    <dl class="detail-list wide">
+      <div><dt>Monthly inflow</dt><dd>{{ client.monthly_inflow|currency }}</dd></div>
+      <div><dt>Monthly outflow</dt><dd>{{ client.monthly_outflow|currency }}</dd></div>
+      <div><dt>Private reserve</dt><dd>{{ client.private_reserve_balance|currency }}</dd></div>
+      <div><dt>Target override</dt><dd>{{ client.private_reserve_target_override|currency if client.private_reserve_target_override is not none else "None" }}</dd></div>
+      <div><dt>Property value</dt><dd>{{ client.property_value|currency }}</dd></div>
+    </dl>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">Reports</p>
+        <h2>History</h2>
+      </div>
+    </div>
+    {% if client.reports %}
+      <div class="report-list">
+        {% for report in client.reports %}
+          <div class="report-row">
+            <div>
+              <strong>{{ report.quarter_label }}</strong>
+              <small>{{ report.report_date }} &middot; created {{ report.created_at.strftime("%Y-%m-%d %H:%M") }}</small>
+            </div>
+            <div class="row-actions">
+              <a class="button small ghost" href="/reports/{{ report.id }}/sacs">SACS PDF</a>
+              <a class="button small ghost" href="/reports/{{ report.id }}/tcc">TCC PDF</a>
+              <a class="button small" href="/reports/{{ report.id }}/download-both">Both PDFs</a>
+              <a class="button small canva" href="/reports/{{ report.id }}/canva">Export to Canva</a>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <strong>No reports yet.</strong>
+        <p>Generate a quarterly report to create SACS and TCC PDFs.</p>
+        <a class="button primary" href="/clients/{{ client.id }}/reports/new">Generate Quarterly Report</a>
+      </div>
+    {% endif %}
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <p class="eyebrow">TCC data</p>
+      <h2>Accounts</h2>
+    </div>
+  </div>
+  {% if client.accounts %}
+    <div class="data-grid">
+      {% for account in client.accounts %}
+        <div class="data-card">
+          <div class="card-top">
+            <span class="badge">{{ account.owner|title }}</span>
+            <span>{{ account.category.replace("_", " ")|title }}</span>
+          </div>
+          <h3>{{ account.account_type }}</h3>
+          <p>{{ account.institution }} &middot; ...{{ account.account_last4 }}</p>
+          <strong>{{ account.balance|currency }}</strong>
+          {% if account.cash_balance is not none %}<small>Cash {{ account.cash_balance|currency }}</small>{% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">No accounts entered.</div>
+  {% endif %}
+</section>
+
+<section class="content-grid">
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">Deductibles</p>
+        <h2>Insurance Lines</h2>
+      </div>
+    </div>
+    {% if client.deductibles %}
+      <div class="list-stack">
+        {% for deductible in client.deductibles %}
+          <div class="list-row static"><strong>{{ deductible.label }}</strong><span>{{ deductible.amount|currency }}</span></div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">No deductibles entered.</div>
+    {% endif %}
+  </div>
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">Liabilities</p>
+        <h2>Debt Lines</h2>
+      </div>
+    </div>
+    {% if client.liabilities %}
+      <div class="list-stack">
+        {% for liability in client.liabilities %}
+          <div class="list-row static">
+            <span><strong>{{ liability.liability_type|title }}</strong><small>{{ liability.lender }} &middot; {{ "%.2f"|format(liability.interest_rate) }}%</small></span>
+            <span>{{ liability.balance|currency }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">No liabilities entered.</div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

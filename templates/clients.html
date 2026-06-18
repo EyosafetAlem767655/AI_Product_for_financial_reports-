@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Clients | AW Client Report Portal{% endblock %}
+{% block content %}
+<header class="page-header">
+  <div>
+    <p class="eyebrow">Client management</p>
+    <h1>Households</h1>
+    <p class="subtle">Review household profiles, update financial structures, and start quarterly reports.</p>
+  </div>
+  <a class="button primary" href="/clients/new">Add Client</a>
+</header>
+
+<section class="panel">
+  {% if clients %}
+    <div class="client-table">
+      <div class="table-head">
+        <span>Household</span>
+        <span>Status</span>
+        <span>Last Report</span>
+        <span>Current Net Worth</span>
+        <span></span>
+      </div>
+      {% for client in clients %}
+        {% set latest = latest_reports.get(client.id) %}
+        <div class="table-row">
+          <span>
+            <strong>{{ client.household_name }}</strong>
+            <small>{{ client.property_address or "No property address entered" }}</small>
+          </span>
+          <span><span class="badge">{{ client.marital_status|title }}</span></span>
+          <span>{{ latest.report_date if latest else "No reports yet" }}</span>
+          <span>{{ (client.monthly_inflow * 0 + client.property_value)|currency }} property</span>
+          <span class="row-actions">
+            <a class="button small ghost" href="/clients/{{ client.id }}">View</a>
+            <a class="button small" href="/clients/{{ client.id }}/reports/new">Generate</a>
+          </span>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <strong>No clients yet.</strong>
+      <p>Add a household to begin entering financial data.</p>
+      <a class="button primary" href="/clients/new">Add Client</a>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

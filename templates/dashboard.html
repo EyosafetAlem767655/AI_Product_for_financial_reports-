@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Dashboard | AW Client Report Portal{% endblock %}
+{% block content %}
+<header class="page-header hero-header">
+  <div>
+    <p class="eyebrow">Internal reporting workspace</p>
+    <h1>Quarterly client reports, from entry to PDF.</h1>
+    <p class="subtle">Manage households, refresh SACS/TCC data, and produce client-ready quarterly report packages.</p>
+  </div>
+  <div class="header-actions">
+    <a class="button primary" href="/clients/new">Add Client</a>
+    <a class="button ghost" href="/clients">View Clients</a>
+  </div>
+</header>
+
+<section class="stats-grid">
+  <div class="stat-card">
+    <span>Total Clients</span>
+    <strong>{{ client_count }}</strong>
+    <small>Seed data loads automatically on first run</small>
+  </div>
+  <div class="stat-card">
+    <span>Reports Generated</span>
+    <strong>{{ report_count }}</strong>
+    <small>SACS and TCC PDFs saved per report</small>
+  </div>
+  <div class="stat-card green">
+    <span>Canva Export</span>
+    <strong>Ready JSON</strong>
+    <small>Safe placeholder unless CANVA_API_KEY is set</small>
+  </div>
+</section>
+
+<section class="content-grid">
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">Households</p>
+        <h2>Client List</h2>
+      </div>
+      <a class="text-link" href="/clients">Open all</a>
+    </div>
+    {% if clients %}
+      <div class="list-stack">
+        {% for client in clients[:4] %}
+          <a class="list-row" href="/clients/{{ client.id }}">
+            <span>
+              <strong>{{ client.household_name }}</strong>
+              <small>{{ client.marital_status|title }} &middot; {{ client.accounts|length }} accounts</small>
+            </span>
+            <span class="chevron">&rsaquo;</span>
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">No clients yet. Add the first household to begin.</div>
+    {% endif %}
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">Recent output</p>
+        <h2>Report History</h2>
+      </div>
+    </div>
+    {% if recent_reports %}
+      <div class="list-stack">
+        {% for report in recent_reports %}
+          <a class="list-row" href="/clients/{{ report.client_id }}">
+            <span>
+              <strong>{{ report.client.household_name }}</strong>
+              <small>{{ report.quarter_label }} &middot; {{ report.report_date }}</small>
+            </span>
+            <span class="badge">PDFs</span>
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">No reports generated yet. Open a client to create the first quarterly package.</div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}
