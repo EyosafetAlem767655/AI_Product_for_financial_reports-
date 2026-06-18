@@ -91,7 +91,7 @@
 
 ## Vercel Deployment Readiness
 
-- [x] `app/index.py` added as the Vercel-detectable FastAPI entrypoint.
+- [x] `api/index.py` added as the Vercel Python Function entrypoint.
 - [x] `vercel.json` added with Python Function routing and runtime limits.
 - [x] Storage layer automatically uses `/tmp/aw-portal` on Vercel when no external `DATABASE_URL` is configured.
 - [x] Storage layer supports `DATABASE_URL` and `POSTGRES_URL` for durable Postgres-backed Vercel deployments.

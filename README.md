@@ -51,7 +51,7 @@ railway up
 
 ## Vercel Deployment
 
-The repo includes `vercel.json` and `app/index.py` so Vercel can run the FastAPI app as a Python Function.
+The repo includes `vercel.json` and `api/index.py` so Vercel can run the FastAPI app as a Python Function.
 
 No environment variables are required for V1 on Vercel. If no `DATABASE_URL` is set, the app automatically stores its SQLite database and generated PDFs under `/tmp/aw-portal` because Vercel's deployment bundle is read-only. That makes Vercel suitable for demos, but not durable production storage.
 
