@@ -71,6 +71,29 @@ def get_report(db: Session, report_id: int) -> Report:
     return report
 
 
+def snapshot_for_report(report: Report) -> dict[str, Any]:
+    if not report.snapshot:
+        raise HTTPException(status_code=404, detail="Report snapshot not found")
+    return json.loads(report.snapshot.snapshot_json)
+
+
+def ensure_report_pdf(report: Report, kind: str) -> Path:
+    stored_path = Path(report.sacs_pdf_path if kind == "sacs" else report.tcc_pdf_path)
+    if stored_path.exists():
+        return stored_path
+
+    payload = snapshot_for_report(report)
+    report_dir = REPORT_DIR / str(report.client_id) / str(report.id)
+    base_name = clean_filename(f"{report.client.household_name}-{report.quarter_label}")
+    if kind == "sacs":
+        regenerated = report_dir / f"{base_name}-SACS.pdf"
+        generate_sacs_pdf(payload, regenerated)
+        return regenerated
+    regenerated = report_dir / f"{base_name}-TCC.pdf"
+    generate_tcc_pdf(payload, regenerated)
+    return regenerated
+
+
 def person_for(client: Client, role: str) -> Person | None:
     return next((person for person in client.people if person.role == role), None)
 
@@ -605,7 +628,7 @@ async def create_report(client_id: int, request: Request, db: Session = Depends(
 @app.get("/reports/{report_id}/sacs")
 def download_sacs(report_id: int, db: Session = Depends(get_db)) -> FileResponse:
     report = get_report(db, report_id)
-    path = Path(report.sacs_pdf_path)
+    path = ensure_report_pdf(report, "sacs")
     if not path.exists():
         raise HTTPException(status_code=404, detail="SACS PDF not found")
     return FileResponse(path, media_type="application/pdf", filename=path.name)
@@ -614,7 +637,7 @@ def download_sacs(report_id: int, db: Session = Depends(get_db)) -> FileResponse
 @app.get("/reports/{report_id}/tcc")
 def download_tcc(report_id: int, db: Session = Depends(get_db)) -> FileResponse:
     report = get_report(db, report_id)
-    path = Path(report.tcc_pdf_path)
+    path = ensure_report_pdf(report, "tcc")
     if not path.exists():
         raise HTTPException(status_code=404, detail="TCC PDF not found")
     return FileResponse(path, media_type="application/pdf", filename=path.name)
@@ -623,8 +646,8 @@ def download_tcc(report_id: int, db: Session = Depends(get_db)) -> FileResponse:
 @app.get("/reports/{report_id}/download-both")
 def download_both(report_id: int, db: Session = Depends(get_db)) -> FileResponse:
     report = get_report(db, report_id)
-    sacs_path = Path(report.sacs_pdf_path)
-    tcc_path = Path(report.tcc_pdf_path)
+    sacs_path = ensure_report_pdf(report, "sacs")
+    tcc_path = ensure_report_pdf(report, "tcc")
     if not sacs_path.exists() or not tcc_path.exists():
         raise HTTPException(status_code=404, detail="One or more PDFs are missing")
     zip_path = sacs_path.parent / f"{clean_filename(report.client.household_name)}-{report.quarter_label}-PDFs.zip"

@@ -49,6 +49,27 @@ railway init
 railway up
 ```
 
+## Vercel Deployment
+
+The repo includes `vercel.json` and `app/index.py` so Vercel can run the FastAPI app as a Python Function.
+
+No environment variables are required for V1 on Vercel. If no `DATABASE_URL` is set, the app automatically stores its SQLite database and generated PDFs under `/tmp/aw-portal` because Vercel's deployment bundle is read-only. That makes Vercel suitable for demos, but not durable production storage.
+
+Optional Vercel variables:
+
+- `DATABASE_URL` or `POSTGRES_URL`: set one of these to a Postgres connection string if you want durable report history on Vercel.
+- `CANVA_API_KEY`: use this only when a real Canva integration exists.
+
+If a report PDF is missing from Vercel's temporary filesystem but the report snapshot still exists in the database, the app regenerates the PDF on download.
+
+Deploy commands:
+
+```bash
+npm install -g vercel
+vercel login
+vercel --prod
+```
+
 ## Demo Flow
 
 1. Open the dashboard.

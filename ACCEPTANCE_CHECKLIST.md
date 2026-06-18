@@ -88,3 +88,12 @@
 - [x] `/health` route added for deployment checks.
 - [x] Storage layer supports `RAILWAY_VOLUME_MOUNT_PATH` and `RAILWAY_DATABASE_PATH`.
 - [ ] Actual Railway deployment verified in a live Railway project. Blocked locally because Railway CLI is not installed/authenticated in this environment.
+
+## Vercel Deployment Readiness
+
+- [x] `app/index.py` added as the Vercel-detectable FastAPI entrypoint.
+- [x] `vercel.json` added with Python Function routing and runtime limits.
+- [x] Storage layer automatically uses `/tmp/aw-portal` on Vercel when no external `DATABASE_URL` is configured.
+- [x] Storage layer supports `DATABASE_URL` and `POSTGRES_URL` for durable Postgres-backed Vercel deployments.
+- [x] Missing PDF files can be regenerated from saved report snapshots.
+- [ ] Durable Vercel production persistence configured. Requires an external database/storage service; `/tmp` is ephemeral.

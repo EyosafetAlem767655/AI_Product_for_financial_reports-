@@ -7,3 +7,4 @@
 - Authentication and role-based permissions are not included in V1.
 - SQLite and generated PDF files are local runtime artifacts.
 - Railway deployment config is included. A real Railway deployment still requires the Railway CLI or GitHub integration plus an authenticated Railway account/project.
+- Vercel deployment config is included. Without an external `DATABASE_URL` or `POSTGRES_URL`, Vercel uses `/tmp/aw-portal`, which is ephemeral and should be treated as demo storage only.

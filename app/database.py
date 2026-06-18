@@ -11,6 +11,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 def _resolve_storage_paths() -> tuple[Path, Path, Path]:
     database_path = os.getenv("RAILWAY_DATABASE_PATH")
     volume_path = os.getenv("RAILWAY_VOLUME_MOUNT_PATH")
+    is_vercel = bool(os.getenv("VERCEL"))
 
     if database_path:
         candidate = Path(database_path)
@@ -19,6 +20,10 @@ def _resolve_storage_paths() -> tuple[Path, Path, Path]:
         report_default = data_dir / "generated_reports"
     elif volume_path:
         data_dir = Path(volume_path)
+        db_file = data_dir / "aw_portal.sqlite3"
+        report_default = data_dir / "generated_reports"
+    elif is_vercel:
+        data_dir = Path("/tmp/aw-portal")
         db_file = data_dir / "aw_portal.sqlite3"
         report_default = data_dir / "generated_reports"
     else:
@@ -34,8 +39,12 @@ DATA_DIR, DB_FILE, REPORT_DIR = _resolve_storage_paths()
 
 
 def get_database_url() -> str:
-    explicit_url = os.getenv("DATABASE_URL")
+    explicit_url = os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL")
     if explicit_url:
+        if explicit_url.startswith("postgres://"):
+            return explicit_url.replace("postgres://", "postgresql+psycopg://", 1)
+        if explicit_url.startswith("postgresql://"):
+            return explicit_url.replace("postgresql://", "postgresql+psycopg://", 1)
         return explicit_url
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     return f"sqlite:///{DB_FILE}"
